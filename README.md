@@ -30,8 +30,8 @@ bluetoothctl
 scan on
 # wait a little bit and check for a line like:
 [NEW] Device DA:EE:50:52:DC:30 D30
-# get the mac of the 
-connect DA:FF:50:52:DC:30 
+# get the mac of the printer from the line
+pair DA:FF:50:52:DC:30 
 ```
 
 If you already connected to the D30 printer get the mac like this:
