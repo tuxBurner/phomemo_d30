@@ -9,6 +9,7 @@ from wand.font import Font
 import json
 from matplotlib import font_manager
 import io
+import subprocess
 
 # --- Helper functions (adapted from your script) ---
 def generate_image(text, font, fontsize, fruit, preview=False):
@@ -75,6 +76,33 @@ def save_config(config):
     with open(CONFIG_FILE, "w") as f:
         json.dump(config, f, indent=2)
 
+def get_bluetooth_adapters():
+    try:
+        result = subprocess.run(['bluetoothctl', 'list'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        adapters = []
+        for line in result.stdout.splitlines():
+            if line.startswith('Controller '):
+                parts = line.split()
+                if len(parts) > 1:
+                    adapters.append(parts[1])
+        return adapters
+    except Exception:
+        return []
+
+def get_bluetooth_devices():
+    try:
+        result = subprocess.run(['bluetoothctl', 'devices'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        devices = []
+        for line in result.stdout.splitlines():
+            if line.startswith('Device '):
+                parts = line.split(' ', 2)
+                if len(parts) == 3:
+                    mac, name = parts[1], parts[2]
+                    devices.append(f"{name} ({mac})")
+        return devices
+    except Exception:
+        return []
+
 # --- GUI ---
 class LabelPrinterGUI:
     def __init__(self, root):
@@ -124,9 +152,12 @@ class LabelPrinterGUI:
         font_size_spin.bind('<FocusOut>', lambda event: self.preview_label())
         ttk.Checkbutton(frm, text="Fruit Label", variable=self.fruit).grid(row=2, column=2, sticky="w")
         ttk.Label(frm, text="Device MAC:").grid(row=3, column=0, sticky="e")
-        ttk.Entry(frm, textvariable=self.device_mac, width=20).grid(row=3, column=1, sticky="we")
+        self.device_combo = ttk.Combobox(frm, values=get_bluetooth_devices(), state="readonly", textvariable=self.device_mac)
+        self.device_combo.grid(row=3, column=1, sticky="we")
+        self.device_combo.bind('<<ComboboxSelected>>', self.on_device_selected)
         ttk.Label(frm, text="Adapter MAC:").grid(row=4, column=0, sticky="e")
-        ttk.Entry(frm, textvariable=self.adapter_mac, width=20).grid(row=4, column=1, sticky="we")
+        self.adapter_combo = ttk.Combobox(frm, values=get_bluetooth_adapters(), textvariable=self.adapter_mac, state="readonly")
+        self.adapter_combo.grid(row=4, column=1, sticky="we")
         ttk.Button(frm, text="Print", command=self.print_label).grid(row=5, column=0, pady=10)
         self.preview_label_widget = ttk.Label(frm)
         self.preview_label_widget.grid(row=6, column=0, columnspan=3, pady=10)
@@ -177,6 +208,11 @@ class LabelPrinterGUI:
         selected_font = self.font_combo.get()
         self.font_path.set(self.font_map[selected_font])
         self.preview_label()
+    def on_device_selected(self, event):
+        value = self.device_combo.get()
+        if '(' in value and ')' in value:
+            mac = value.split('(')[-1].split(')')[0]
+            self.device_mac.set(mac)
 
 def main():
     root = tk.Tk()
