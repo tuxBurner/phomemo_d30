@@ -5,23 +5,36 @@ from wand.font import Font
 import PIL.Image
 import image_helper
 import os
+import socket
 
 
 @click.command()
 @click.argument('text')
+@click.option('--deviceMac',  help='Printer Bluetooth device MAC address get it with: bluetoothctl devices')
+@click.option('--adapterMac', help='Bluetooth adapter MAC address get it with: bluetoothctl list')
 @click.option('--font', default="Helvetica", help='Path to TTF font file')
 @click.option('--fruit', is_flag=True, show_default=True, default=False,
               help='Enable offsets to print on a fruit label')
-def main(text, font, fruit):
-    port = serial.Serial("/dev/rfcomm1", timeout=10)
+def main(text, devicemac, adaptermac, font, fruit):
+
+    if(devicemac is None):
+        raise click.UsageError('You must specify --deviceMac')
+
+    if(adaptermac is None):
+        raise click.UsageError('You must specify --adapterMac')    
+
+    sock = socket.socket(socket.AF_BLUETOOTH, socket.SOCK_STREAM, socket.BTPROTO_RFCOMM)    
+    sock.bind((adaptermac, 1))
+    sock.connect((devicemac, 1))
 
     filename = generate_image(text, font, fruit, "temp.png")
-    header(port)
-    print_image(port, filename)
+    header(sock)
+    print_image(sock, filename)
     os.remove(filename)
 
+    sock.close()
 
-def header(port):
+def header(sock):
     # printer initialization sniffed from Android app "Print Master"
     packets = [
         '1f1138',
@@ -34,8 +47,7 @@ def header(port):
     ]
 
     for packet in packets:
-        port.write(bytes.fromhex(packet))
-        port.flush()
+        sock.send(bytes.fromhex(packet))        
 
 
 def generate_image(text, font, fruit, filename):
@@ -62,7 +74,7 @@ def generate_image(text, font, fruit, filename):
     return filename
 
 
-def print_image(port, filename):
+def print_image(sock, filename):
     width = 96
 
     with PIL.Image.open(filename) as src:
@@ -84,9 +96,8 @@ def print_image(port, filename):
                     byte |= (pixel & 0x01) << (7 - bit)
                 output.append(byte)
 
-        port.write(output)
-        port.flush()
-
+        sock.send(output)
+        
         output = ''
 
 
