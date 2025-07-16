@@ -2,6 +2,7 @@
 Python script to print text on a Phomemo D30 label printer
 
 # Acknowledgements
+Based on [phomemo_d30](https://github.com/polskafan/phomemo_d30) by polskafan and
 Based on [phomemo-tools](https://github.com/vivier/phomemo-tools) by Laurent Vivier and
 [phomemo_m02s](https://github.com/theacodes/phomemo_m02s) by theacodes.
 
@@ -13,7 +14,7 @@ alt="Video example of the Python script" width="640" /></a>
 # Checkout and install
 
 ```shell
-git clone https://github.com/polskafan/phomemo_d30.git
+git clone https://github.com/tuxBurner/phomemo_d30.git
 cd phomemo_d30
 python3 -m venv venv
 venv/bin/pip install -r requirements.txt
