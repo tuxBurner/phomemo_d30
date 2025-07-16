@@ -6,6 +6,7 @@ import socket
 import image_helper
 from wand.image import Image
 from wand.font import Font
+import json
 
 # --- Helper functions (adapted from your script) ---
 def generate_image(text, font, fontsize, fruit, filename, preview=False):
@@ -57,17 +58,30 @@ def print_image(sock, filename):
                 output_bytes.append(byte)
         sock.send(output_bytes)
 
+CONFIG_FILE = "label_printer_config.json"
+
+def load_config():
+    if os.path.exists(CONFIG_FILE):
+        with open(CONFIG_FILE, "r") as f:
+            return json.load(f)
+    return {}
+
+def save_config(config):
+    with open(CONFIG_FILE, "w") as f:
+        json.dump(config, f, indent=2)
+
 # --- GUI ---
 class LabelPrinterGUI:
     def __init__(self, root):
+        config = load_config()
         self.root = root
         root.title("Phomemo D30 Label Printer")
-        self.font_path = tk.StringVar(value="Helvetica")
-        self.font_size = tk.IntVar(value=44)
+        self.font_path = tk.StringVar(value=config.get("font_path", "Helvetica"))
+        self.font_size = tk.IntVar(value=config.get("font_size", 44))
         self.text = tk.StringVar()
-        self.device_mac = tk.StringVar()
-        self.adapter_mac = tk.StringVar()
-        self.fruit = tk.BooleanVar()
+        self.device_mac = tk.StringVar(value=config.get("device_mac", ""))
+        self.adapter_mac = tk.StringVar(value=config.get("adapter_mac", ""))
+        self.fruit = tk.BooleanVar(value=config.get("fruit", False))
         self.preview_img = None
         # Layout
         frm = ttk.Frame(root, padding=10)
@@ -76,6 +90,7 @@ class LabelPrinterGUI:
         text_entry = ttk.Entry(frm, textvariable=self.text, width=30)
         text_entry.grid(row=0, column=1, columnspan=2, sticky="we")
         text_entry.bind('<Return>', lambda event: self.preview_label())
+        text_entry.bind('<KeyRelease>', lambda event: self.preview_label())
         ttk.Label(frm, text="Font Path:").grid(row=1, column=0, sticky="e")
         ttk.Entry(frm, textvariable=self.font_path, width=20).grid(row=1, column=1, sticky="we")
         ttk.Button(frm, text="Browse", command=self.browse_font).grid(row=1, column=2)
@@ -89,10 +104,15 @@ class LabelPrinterGUI:
         ttk.Entry(frm, textvariable=self.device_mac, width=20).grid(row=3, column=1, sticky="we")
         ttk.Label(frm, text="Adapter MAC:").grid(row=4, column=0, sticky="e")
         ttk.Entry(frm, textvariable=self.adapter_mac, width=20).grid(row=4, column=1, sticky="we")
-        ttk.Button(frm, text="Preview", command=self.preview_label).grid(row=5, column=0, pady=10)
-        ttk.Button(frm, text="Print", command=self.print_label).grid(row=5, column=1, pady=10)
+        ttk.Button(frm, text="Print", command=self.print_label).grid(row=5, column=0, pady=10)
         self.preview_label_widget = ttk.Label(frm)
         self.preview_label_widget.grid(row=6, column=0, columnspan=3, pady=10)
+        # Save config when settings change
+        self.font_path.trace_add('write', lambda *args: self.save_settings())
+        self.font_size.trace_add('write', lambda *args: self.save_settings())
+        self.device_mac.trace_add('write', lambda *args: self.save_settings())
+        self.adapter_mac.trace_add('write', lambda *args: self.save_settings())
+        self.fruit.trace_add('write', lambda *args: self.save_settings())
     def browse_font(self):
         path = filedialog.askopenfilename(filetypes=[("Font files", "*.ttf;*.otf"), ("All files", "*")])
         if path:
@@ -122,6 +142,15 @@ class LabelPrinterGUI:
             messagebox.showinfo("Success", "Label sent to printer!")
         except Exception as e:
             messagebox.showerror("Print Error", str(e))
+    def save_settings(self):
+        config = {
+            "font_path": self.font_path.get(),
+            "font_size": self.font_size.get(),
+            "device_mac": self.device_mac.get(),
+            "adapter_mac": self.adapter_mac.get(),
+            "fruit": self.fruit.get()
+        }
+        save_config(config)
 
 def main():
     root = tk.Tk()
