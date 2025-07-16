@@ -8,9 +8,10 @@ from wand.image import Image
 from wand.font import Font
 import json
 from matplotlib import font_manager
+import io
 
 # --- Helper functions (adapted from your script) ---
-def generate_image(text, font, fontsize, fruit, filename, preview=False):
+def generate_image(text, font, fontsize, fruit, preview=False):
     font = Font(path=font, size=fontsize, color="black")
     if fruit:
         width, height = 240, 80
@@ -26,8 +27,11 @@ def generate_image(text, font, fontsize, fruit, filename, preview=False):
             img.extent(width=320, height=96)
         if not preview:
             img.rotate(270)
-        img.save(filename=filename)
-    return filename
+        buf = io.BytesIO()
+        img.format = 'png'
+        img.save(file=buf)
+        buf.seek(0)
+        return buf
 
 def header(sock):
     packets = [
@@ -138,26 +142,25 @@ class LabelPrinterGUI:
             self.font_path.set(path)
     def preview_label(self):
         try:
-            filename = "temp_preview.png"
-            generate_image(self.text.get(), self.font_path.get(), self.font_size.get(), self.fruit.get(), filename, preview=True)
-            img = PILImage.open(filename)
+            buf = generate_image(self.text.get(), self.font_path.get(), self.font_size.get(), self.fruit.get(), preview=True)
+            img = PILImage.open(buf)
             img.thumbnail((320, 320))
             self.preview_img = ImageTk.PhotoImage(img)
             self.preview_label_widget.config(image=self.preview_img)
-            os.remove(filename)
         except Exception as e:
             messagebox.showerror("Preview Error", str(e))
     def print_label(self):
         try:
-            filename = "temp_print.png"
-            generate_image(self.text.get(), self.font_path.get(), self.font_size.get(), self.fruit.get(), filename, preview=False)
+            buf = generate_image(self.text.get(), self.font_path.get(), self.font_size.get(), self.fruit.get(), preview=False)
+            img = PILImage.open(buf)
+            img.save("temp_print.png")  # Save to file for image_helper compatibility
             sock = socket.socket(socket.AF_BLUETOOTH, socket.SOCK_STREAM, socket.BTPROTO_RFCOMM)
             sock.bind((self.adapter_mac.get(), 1))
             sock.connect((self.device_mac.get(), 1))
             header(sock)
-            print_image(sock, filename)
+            print_image(sock, "temp_print.png")
             sock.close()
-            os.remove(filename)
+            os.remove("temp_print.png")
             messagebox.showinfo("Success", "Label sent to printer!")
         except Exception as e:
             messagebox.showerror("Print Error", str(e))
