@@ -98,3 +98,10 @@ Paper Height: 4001 =(Little Endian)=> 0x140 =(hex2bin)=> 320 pixel
 ```
 
 Therefore the picture size is 320x96 (note: The picture is rotated by 90 degrees before printing).
+
+# Notes
+
+sudo dnf install python3-tkinter
+sudo dnf install make gcc freetype-devel pkgconf-pkg-config
+sudo dnf install python3-devel
+sudo dnf install gcc-c++

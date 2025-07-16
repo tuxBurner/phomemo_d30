@@ -7,6 +7,7 @@ import image_helper
 from wand.image import Image
 from wand.font import Font
 import json
+from matplotlib import font_manager
 
 # --- Helper functions (adapted from your script) ---
 def generate_image(text, font, fontsize, fruit, filename, preview=False):
@@ -83,6 +84,17 @@ class LabelPrinterGUI:
         self.adapter_mac = tk.StringVar(value=config.get("adapter_mac", ""))
         self.fruit = tk.BooleanVar(value=config.get("fruit", False))
         self.preview_img = None
+        # Get system fonts, filter out invalid ones
+        self.font_files = font_manager.findSystemFonts(fontpaths=None, fontext='ttf')
+        self.font_names = []
+        self.font_map = {}
+        for f in self.font_files:
+            try:
+                name = font_manager.FontProperties(fname=f).get_name()
+                self.font_names.append(name)
+                self.font_map[name] = f
+            except Exception:
+                continue
         # Layout
         frm = ttk.Frame(root, padding=10)
         frm.grid()
@@ -91,8 +103,15 @@ class LabelPrinterGUI:
         text_entry.grid(row=0, column=1, columnspan=2, sticky="we")
         text_entry.bind('<Return>', lambda event: self.preview_label())
         text_entry.bind('<KeyRelease>', lambda event: self.preview_label())
-        ttk.Label(frm, text="Font Path:").grid(row=1, column=0, sticky="e")
-        ttk.Entry(frm, textvariable=self.font_path, width=20).grid(row=1, column=1, sticky="we")
+        ttk.Label(frm, text="Font Name:").grid(row=1, column=0, sticky="e")
+        self.font_combo = ttk.Combobox(frm, values=self.font_names, state="readonly")
+        self.font_combo.grid(row=1, column=1, sticky="we")
+        self.font_combo.bind('<<ComboboxSelected>>', self.on_font_selected)
+        # Set initial font selection if possible
+        if self.font_names:
+            initial_font = font_manager.FontProperties(fname=self.font_path.get()).get_name() if os.path.exists(self.font_path.get()) else self.font_names[0]
+            self.font_combo.set(initial_font)
+            self.font_path.set(self.font_map.get(initial_font, self.font_files[0]))
         ttk.Button(frm, text="Browse", command=self.browse_font).grid(row=1, column=2)
         ttk.Label(frm, text="Font Size:").grid(row=2, column=0, sticky="e")
         font_size_spin = tk.Spinbox(frm, from_=1, to=100, textvariable=self.font_size, width=5, command=self.preview_label)
@@ -151,6 +170,10 @@ class LabelPrinterGUI:
             "fruit": self.fruit.get()
         }
         save_config(config)
+    def on_font_selected(self, event):
+        selected_font = self.font_combo.get()
+        self.font_path.set(self.font_map[selected_font])
+        self.preview_label()
 
 def main():
     root = tk.Tk()
