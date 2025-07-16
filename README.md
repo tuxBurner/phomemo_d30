@@ -50,21 +50,32 @@ bluetoothctl list
 Controller D8:B3:2F:BE:C2:26 computer [default]
 ```
 
+Check how the label would look like
+```shell
+venv/bin/python print_text.py  --fontSize 65 "Hello World!"
+```
+generates **temp.png** file but does not print it
 
 Basic usage
 ```shell
-venv/bin/python print_text.py --adapterMac D8:B3:2F:BE:C2:26 --deviceMac DA:FF:50:52:DC:30 "Hello World!"
+venv/bin/python print_text.py --print --adapterMac D8:B3:2F:BE:C2:26 --deviceMac DA:FF:50:52:DC:30 "Hello World!"
 ```
 
 Print on "fruit" labels
 ```bash
-venv/bin/python print_text.py --adapterMac D8:B3:2F:BE:C2:26 --deviceMac DA:FF:50:52:DC:30 --fruit "This is a fruit label."
+venv/bin/python print_text.py --print  --adapterMac D8:B3:2F:BE:C2:26 --deviceMac DA:FF:50:52:DC:30 --fruit "This is a fruit label."
 ```
 
 Change font
 ```bash
-venv/bin/python print_text.py --adapterMac D8:B3:2F:BE:C2:26 --deviceMac DA:FF:50:52:DC:30 --font Arial.ttf "Hello World!"
+venv/bin/python print_text.py --print  --adapterMac D8:B3:2F:BE:C2:26 --deviceMac DA:FF:50:52:DC:30 --font Arial.ttf "Hello World!"
 ```
+
+Change font size
+```bash
+venv/bin/python print_text.py --print --fontSize 65 --adapterMac D8:B3:2F:BE:C2:26 --deviceMac DA:FF:50:52:DC:30 --font Arial.ttf "Hello World!"
+```
+
 
 Multiline Labels
 ```bash

@@ -13,26 +13,30 @@ import socket
 @click.option('--deviceMac',  help='Printer Bluetooth device MAC address get it with: bluetoothctl devices')
 @click.option('--adapterMac', help='Bluetooth adapter MAC address get it with: bluetoothctl list')
 @click.option('--font', default="Helvetica", help='Path to TTF font file')
-@click.option('--fruit', is_flag=True, show_default=True, default=False,
-              help='Enable offsets to print on a fruit label')
-def main(text, devicemac, adaptermac, font, fruit):
+@click.option('--fontSize', default=44, help='Size of the font in pixels')
+@click.option('--print', is_flag=True, show_default=True, default=False, help='Print the label on the printer')
+@click.option('--fruit', is_flag=True, show_default=True, default=False, help='Enable offsets to print on a fruit label')
+def main(text, devicemac, adaptermac, font, fontsize, print, fruit):
 
-    if(devicemac is None):
+    if(devicemac is None and print):
         raise click.UsageError('You must specify --deviceMac')
 
-    if(adaptermac is None):
-        raise click.UsageError('You must specify --adapterMac')    
+    if(adaptermac is None and print):
+        raise click.UsageError('You must specify --adapterMac')        
 
-    sock = socket.socket(socket.AF_BLUETOOTH, socket.SOCK_STREAM, socket.BTPROTO_RFCOMM)    
-    sock.bind((adaptermac, 1))
-    sock.connect((devicemac, 1))
+    filename = generate_image(text, font, fontsize, fruit, "temp.png")
 
-    filename = generate_image(text, font, fruit, "temp.png")
-    header(sock)
-    print_image(sock, filename)
-    os.remove(filename)
-
-    sock.close()
+    if(print):
+        # connect to printer via Bluetooth
+        sock = socket.socket(socket.AF_BLUETOOTH, socket.SOCK_STREAM, socket.BTPROTO_RFCOMM)
+        sock.bind((adaptermac, 1))
+        sock.connect((devicemac, 1))
+        header(sock)
+        print_image(sock, filename)
+        os.remove(filename)
+        sock.close()
+    #else:
+    #    print(f"Image saved to {filename}")    
 
 def header(sock):
     # printer initialization sniffed from Android app "Print Master"
@@ -50,8 +54,9 @@ def header(sock):
         sock.send(bytes.fromhex(packet))        
 
 
-def generate_image(text, font, fruit, filename):
-    font = Font(path=font)
+def generate_image(text, font, fontsize, fruit, filename):
+    font = Font(path=font, size=fontsize, color="black")
+    
     if fruit:
         width, height = 240, 80
     else:
