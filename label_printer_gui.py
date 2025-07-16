@@ -8,7 +8,7 @@ from wand.image import Image
 from wand.font import Font
 
 # --- Helper functions (adapted from your script) ---
-def generate_image(text, font, fontsize, fruit, filename):
+def generate_image(text, font, fontsize, fruit, filename, preview=False):
     font = Font(path=font, size=fontsize, color="black")
     if fruit:
         width, height = 240, 80
@@ -22,7 +22,8 @@ def generate_image(text, font, fontsize, fruit, filename):
             img.extent(width=320, height=96, x=-60)
         else:
             img.extent(width=320, height=96)
-        img.rotate(270)
+        if not preview:
+            img.rotate(270)
         img.save(filename=filename)
     return filename
 
@@ -79,7 +80,12 @@ class LabelPrinterGUI:
         ttk.Entry(frm, textvariable=self.font_path, width=20).grid(row=1, column=1, sticky="we")
         ttk.Button(frm, text="Browse", command=self.browse_font).grid(row=1, column=2)
         ttk.Label(frm, text="Font Size:").grid(row=2, column=0, sticky="e")
-        ttk.Entry(frm, textvariable=self.font_size, width=5).grid(row=2, column=1, sticky="w")
+        font_size_spin = tk.Spinbox(frm, from_=1, to=100, textvariable=self.font_size, width=5)
+        font_size_spin.grid(row=2, column=1, sticky="w")
+        font_size_spin.bind('<KeyRelease>', lambda event: self.preview_label())
+        font_size_spin.bind('<<Increment>>', lambda event: self.preview_label())
+        font_size_spin.bind('<<Decrement>>', lambda event: self.preview_label())
+        font_size_spin.bind('<FocusOut>', lambda event: self.preview_label())
         ttk.Checkbutton(frm, text="Fruit Label", variable=self.fruit).grid(row=2, column=2, sticky="w")
         ttk.Label(frm, text="Device MAC:").grid(row=3, column=0, sticky="e")
         ttk.Entry(frm, textvariable=self.device_mac, width=20).grid(row=3, column=1, sticky="we")
@@ -96,7 +102,7 @@ class LabelPrinterGUI:
     def preview_label(self):
         try:
             filename = "temp_preview.png"
-            generate_image(self.text.get(), self.font_path.get(), self.font_size.get(), self.fruit.get(), filename)
+            generate_image(self.text.get(), self.font_path.get(), self.font_size.get(), self.fruit.get(), filename, preview=True)
             img = PILImage.open(filename)
             img.thumbnail((320, 320))
             self.preview_img = ImageTk.PhotoImage(img)
@@ -107,7 +113,7 @@ class LabelPrinterGUI:
     def print_label(self):
         try:
             filename = "temp_print.png"
-            generate_image(self.text.get(), self.font_path.get(), self.font_size.get(), self.fruit.get(), filename)
+            generate_image(self.text.get(), self.font_path.get(), self.font_size.get(), self.fruit.get(), filename, preview=False)
             sock = socket.socket(socket.AF_BLUETOOTH, socket.SOCK_STREAM, socket.BTPROTO_RFCOMM)
             sock.bind((self.adapter_mac.get(), 1))
             sock.connect((self.device_mac.get(), 1))
